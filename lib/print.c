@@ -102,6 +102,7 @@ lp_Print(void (*output)(void *, char *, int),
 			prec = prec * 10 + *fmt - '0';fmt++;
 		}
 	}
+	if(*fmt == 'l'){fmt++;longFlag = 1;}
 
 	negFlag = 0;
 	switch (*fmt) {
