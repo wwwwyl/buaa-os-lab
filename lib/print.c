@@ -92,12 +92,23 @@ lp_Print(void (*output)(void *, char *, int),
 	}
 
 	width = -1;
-	if(*fmt>='0' && *fmt<='9') width = skip_atoi(&fmt);
-	
+	if(*fmt>='0' && *fmt<='9'){
+		width = 0;
+        	while(*fmt >= '0' && *fmt <= '9'){
+                	width = width*10 + (*fmt - '0');
+                	fmt++;
+        	}
+	}
+
+
 	prec = -1;
 	if(*fmt == '.'){
 		fmt++;
-		prec = skip_atoi(&fmt);
+		prec = 0;
+                while(*fmt >= '0' && *fmt <= '9'){
+                        prec = prec*10 + (*fmt - '0');
+                        fmt++;
+                }
 	}
 
 	if(*fmt == 'l'){
