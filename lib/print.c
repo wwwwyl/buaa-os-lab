@@ -83,11 +83,11 @@ lp_Print(void (*output)(void *, char *, int),
 	/* check for other prefixes */
 	width = 0, prec = -1, ladjust = 0, padc = ' ', posFlag = 0, wellFlag = 0;
 	/* check format flag */
-	if(*fmt=='-'){ladjust = 1;fmt++;}
-	if(*fmt=='+'){posFlag = 1;fmt++;}
-	if(*fmt==' '){OUTPUT(arg,fmt,1);fmt++;}
-	if(*fmt=='#'){wellFlag = 1;fmt++;}
-	if(*fmt=='0'){padc = '0';fmt++;}
+	if(*fmt == '-'){ladjust = 1;fmt++;}
+	if(*fmt == '+'){posFlag = 1;fmt++;}
+	if(*fmt == ' '){OUTPUT(arg,fmt,1);fmt++;}
+	if(*fmt == '#'){wellFlag = 1;fmt++;}
+	if(*fmt == '0'){padc = '0';fmt++;}
 
 	if(*fmt>='1' && *fmt<='9'){
 		width = *fmt - '0';fmt++;
@@ -97,6 +97,7 @@ lp_Print(void (*output)(void *, char *, int),
 	}
 	if(*fmt=='.'){
 		fmt++;
+		prec = 0;
 		while(*fmt>='0' && *fmt<='9'){
 			prec = prec * 10 + *fmt - '0';fmt++;
 		}
@@ -167,7 +168,7 @@ lp_Print(void (*output)(void *, char *, int),
 	    break;
 
 	 case 'X':
-	    if(wellFlag) OUTPUT(arg,"0x",2);
+	    if(wellFlag) OUTPUT(arg,"0X",2);
 	    if (longFlag) { 
 		num = va_arg(ap, long int);
 	    } else { 
