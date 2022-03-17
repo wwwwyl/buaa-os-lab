@@ -63,57 +63,37 @@ lp_Print(void (*output)(void *, char *, int),
     */
 
     for(;;) {
-
-        /* Part1: your code here */
-	while(*fmt != '%')
-	{ 
+	{
+            /* Part1: your code here */
 	    /* scan for the next '%' */
+		char *sfmt = fmt;
+		while(*fmt != '%' && *fmt) fmt++;
 	    /* flush the string found so far */
-		OUTPUT(arg,fmt,1);
-		fmt++;
+		OUTPUT(arg,sfmt,fmt-sfmt);
 	    /* check "are we hitting the end?" */
-		if(*fmt == '\0') break;
+		if(!*fmt) break;
 	}
-
-	
 	/* we found a '%' */
+	fmt++;
 	/* check for long */
+	if(*fmt == 'l'){fmt++;longFlag = 1;}
+	else longFlag = 0;
 	/* check for other prefixes */
+	width = 0, prec = -1, ladjust = 0, padc = ' ';
 	/* check format flag */
-	ladjust = 0;
-	int flag_loop = 1;
-	while(flag_loop){
-		fmt++;
-		switch(*fmt){
-			case '-':ladjust=1;break;
-			case '0':padc='0';break;
-			default:flag_loop=0;break;
+	if(*fmt=='-'){ladjust = 1;fmt++;}
+	if(*fmt=='0'){padc = '0';fmt++;}
+	if(*fmt>='1' && *fmt<='9'){
+		width = *fmt - '0';fmt++;
+		while(*fmt>='0' && *fmt<='9'){
+			width = width*10 + *fmt - '0';fmt++;
 		}
 	}
-
-	width = -1;
-	if(*fmt>='0' && *fmt<='9'){
-		width = 0;
-        	while(*fmt >= '0' && *fmt <= '9'){
-                	width = width*10 + (*fmt - '0');
-                	fmt++;
-        	}
-	}
-
-
-	prec = -1;
-	if(*fmt == '.'){
+	if(*fmt=='.'){
 		fmt++;
-		prec = 0;
-                while(*fmt >= '0' && *fmt <= '9'){
-                        prec = prec*10 + (*fmt - '0');
-                        fmt++;
-                }
-	}
-
-	if(*fmt == 'l'){
-		longFlag = 1;
-		fmt++;
+		while(*fmt>='0' && *fmt<='9'){
+			prec = prec * 10 + *fmt - '0';fmt++;
+		}
 	}
 
 	negFlag = 0;
@@ -141,7 +121,7 @@ lp_Print(void (*output)(void *, char *, int),
 			Refer to other part (case 'b',case 'o' etc.) and func PrintNum to complete this part.
 			Think the difference between case 'd' and others. (hint: negFlag).
 		*/
-	    if(num < 0)negFlag = 1;
+	    if(num < 0){negFlag = 1;num = -num;}
 	    else negFlag = 0;
 	    length = PrintNum(buf, num, 10, negFlag, width, ladjust, padc, 0);
 	    OUTPUT(arg, buf, length);
