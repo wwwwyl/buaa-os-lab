@@ -13,4 +13,3 @@ then
 	done
 fi
 pwd >> result.txt
-
