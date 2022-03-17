@@ -51,6 +51,8 @@ lp_Print(void (*output)(void *, char *, int),
 
     int longFlag;
     int negFlag;
+    int posFlag;
+    int wellFlag;
     int width;
     int prec;
     int ladjust;
@@ -79,10 +81,14 @@ lp_Print(void (*output)(void *, char *, int),
 	if(*fmt == 'l'){fmt++;longFlag = 1;}
 	else longFlag = 0;
 	/* check for other prefixes */
-	width = 0, prec = -1, ladjust = 0, padc = ' ';
+	width = 0, prec = -1, ladjust = 0, padc = ' ', posFlag = 0, wellFlag = 0;
 	/* check format flag */
 	if(*fmt=='-'){ladjust = 1;fmt++;}
+	if(*fmt=='+'){posFlag = 1;fmt++;}
+	if(*fmt==' '){OUTPUT(arg,fmt,1);fmt++;}
+	if(*fmt=='#'){wellFlag = 1;fmt++;}
 	if(*fmt=='0'){padc = '0';fmt++;}
+
 	if(*fmt>='1' && *fmt<='9'){
 		width = *fmt - '0';fmt++;
 		while(*fmt>='0' && *fmt<='9'){
@@ -122,7 +128,7 @@ lp_Print(void (*output)(void *, char *, int),
 			Think the difference between case 'd' and others. (hint: negFlag).
 		*/
 	    if(num < 0){negFlag = 1;num = -num;}
-	    else negFlag = 0;
+	    if(num > 0 && posFlag) OUTPUT(arg,"+",1);
 	    length = PrintNum(buf, num, 10, negFlag, width, ladjust, padc, 0);
 	    OUTPUT(arg, buf, length);
 	    break;
@@ -150,6 +156,7 @@ lp_Print(void (*output)(void *, char *, int),
 	    break;
 	    
 	 case 'x':
+	    if(wellFlag) OUTPUT(arg,"0x",2);
 	    if (longFlag) { 
 		num = va_arg(ap, long int);
 	    } else { 
@@ -160,6 +167,7 @@ lp_Print(void (*output)(void *, char *, int),
 	    break;
 
 	 case 'X':
+	    if(wellFlag) OUTPUT(arg,"0x",2);
 	    if (longFlag) { 
 		num = va_arg(ap, long int);
 	    } else { 
