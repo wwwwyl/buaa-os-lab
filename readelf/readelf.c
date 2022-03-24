@@ -29,6 +29,12 @@ int is_elf_format(u_char *binary)
         return 0;
 }
 
+Elf32_Addr rounddown(Elf32_Addr addr){
+	Elf32_Word pg = 0x800;
+	if(addr % pg == 0) return addr;
+	else return (addr / pg) * 0x800; 
+}
+
 /* Overview:
  *   read an elf format binary file. get ELF's information
  *
@@ -50,6 +56,7 @@ int readelf(u_char *binary, int size)
         int Nr;
 
         Elf32_Shdr *shdr = NULL;
+	Elf32_Phdr *phdr = NULL;
 
         u_char *ptr_sh_table = NULL;
         Elf32_Half sh_entry_count;
@@ -61,12 +68,41 @@ int readelf(u_char *binary, int size)
                 printf("not a standard elf format\n");
                 return 0;
         }
+	
+	phdr = (Elf32_Phdr *) (binary + ehdr->e_phoff);
+	for(int i=0; i<ehdr->e_phnum-1; i++){
+		for(int j=i+1; j<ehdr->e_phnum; j++){
+			Elf32_Addr l_1,r_1,l_2,r_2;
+			if((phdr+i)->p_vaddr < (phdr+j)->p_vaddr){
+				l_1 = (phdr+i)->p_vaddr;
+				r_1 = l_1 + (phdr+i)->p_memsz;
+				l_2 = (phdr+j)->p_vaddr;
+                        	r_2 = l_2 + (phdr+j)->p_memsz;
+			}else{
+				l_2 = (phdr+i)->p_vaddr;
+                                r_2 = l_2 + (phdr+i)->p_memsz;
+                                l_1 = (phdr+j)->p_vaddr;
+                                r_1 = l_1 + (phdr+j)->p_memsz;
+			}
+			if(l_2<r_1){
+				printf("Conflict at page va : 0x%x\n", rounddown(l_2));
+				return 0;
+			}else if(rounddown(r_1) == rounddown(l_2)){
+				printf("Overlay at page va : 0x%x\n", rounddown(l_2));
+				return 0;
+			}
+		}
+	}	
+	//printf("0x%x\n", rounddown(0x804));
+	for(int i=0; i<ehdr->e_phnum; i++){
+		printf("%d:0x%x,0x%x\n", i, (phdr+i)->p_filesz, (phdr+i)->p_memsz);
+	}
 
         // get section table addr, section header number and section header size.
-        shdr = (Elf32_Shdr *) (binary + ehdr->e_shoff);
+        //shdr = (Elf32_Shdr *) (binary + ehdr->e_shoff);
         // for each section header, output section number and section addr.
-	printf("Read : %d:0x%x,0x%x\n", 2, (shdr+2)->sh_offset, (shdr+2)->sh_addr);
-	printf("Read : %d:0x%x,0x%x\n", 3, (shdr+3)->sh_offset, (shdr+3)->sh_addr);
+	//printf("Read : %d:0x%x,0x%x\n", 2, (shdr+2)->sh_offset, (shdr+2)->sh_addr);
+	//printf("Read : %d:0x%x,0x%x\n", 3, (shdr+3)->sh_offset, (shdr+3)->sh_addr);
 	//for(int i=0; i<ehdr->e_shnum;i++){
 	//       printf("%d:0x%x\n",i,(shdr+i)->sh_addr);
 	//}	       
