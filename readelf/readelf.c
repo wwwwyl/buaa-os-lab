@@ -91,11 +91,11 @@ int readelf(u_char *binary, int size)
                                 r_1 = l_1 + (phdr+j)->p_memsz;
 			}
 			if(l_2<r_1){
-				//printf("Conflict at page va : 0x%x\n", roundup(l_2));
+				printf("Conflict at page va : 0x%x\n", roundup(l_2));
 				return 0;
 			}
 			if(rounddown(r_1) == rounddown(l_2)){
-				printf("Overlay at page va : 0x%x\n", roundup(l_2));
+				//printf("Overlay at page va : 0x%x\n", roundup(l_2));
 				return 0;
 			}
 		}
