@@ -30,15 +30,15 @@ int is_elf_format(u_char *binary)
 }
 
 Elf32_Addr roundup(Elf32_Addr addr){
-        Elf32_Word pg = 0x800;
+        Elf32_Word pg = 0x1000;
         if(addr % pg == 0) return addr;
-        else return (addr / pg) * 0x800;
+        else return (addr / pg) * pg;
 }
 
 Elf32_Addr rounddown(Elf32_Addr addr){
-	Elf32_Word pg = 0x800;
+	Elf32_Word pg = 0x1000;
 	if(addr % pg == 0) return addr;
-	else return (addr / pg + 1) * 0x800; 
+	else return (addr / pg + 1) * pg; 
 }
 
 /* Overview:
@@ -95,7 +95,7 @@ int readelf(u_char *binary, int size)
 				return 0;
 			}
 			if(rounddown(r_1) == rounddown(l_2)){
-				//printf("Overlay at page va : 0x%x\n", roundup(l_2));
+				printf("Overlay at page va : 0x%x\n", roundup(l_2));
 				return 0;
 			}
 		}
