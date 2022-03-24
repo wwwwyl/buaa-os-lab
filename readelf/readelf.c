@@ -87,7 +87,8 @@ int readelf(u_char *binary, int size)
 			if(l_2<r_1){
 				printf("Conflict at page va : 0x%x\n", rounddown(l_2));
 				return 0;
-			}else if(rounddown(r_1) == rounddown(l_2)){
+			}
+			if(rounddown(r_1) == rounddown(l_2)){
 				printf("Overlay at page va : 0x%x\n", rounddown(l_2));
 				return 0;
 			}
