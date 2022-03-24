@@ -29,10 +29,16 @@ int is_elf_format(u_char *binary)
         return 0;
 }
 
+Elf32_Addr roundup(Elf32_Addr addr){
+        Elf32_Word pg = 0x800;
+        if(addr % pg == 0) return addr;
+        else return (addr / pg) * 0x800;
+}
+
 Elf32_Addr rounddown(Elf32_Addr addr){
 	Elf32_Word pg = 0x800;
 	if(addr % pg == 0) return addr;
-	else return (addr / pg) * 0x800; 
+	else return (addr / pg + 1) * 0x800; 
 }
 
 /* Overview:
@@ -85,11 +91,11 @@ int readelf(u_char *binary, int size)
                                 r_1 = l_1 + (phdr+j)->p_memsz;
 			}
 			if(l_2<r_1){
-				printf("Conflict at page va : 0x%x\n", rounddown(l_2));
+				printf("Conflict at page va : 0x%x\n", roundup(l_2));
 				return 0;
 			}
 			if(rounddown(r_1) == rounddown(l_2)){
-				printf("Overlay at page va : 0x%x\n", rounddown(l_2));
+				printf("Overlay at page va : 0x%x\n", roundup(l_2));
 				return 0;
 			}
 		}
