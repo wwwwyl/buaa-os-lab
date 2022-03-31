@@ -8,8 +8,8 @@ void my_cal(){
 	unsigned int num=0;
 	while(1){
 		char c = _my_getchar();
-		if(c == '\n') break;
-		if(c<'0'||c>'9') continue;
+		if(c == '\n'||c=='\r') break;
+		if(c<'0'||c>'9') break;
 		num = num*10+c-'0';
 	}
 	if(num==0) _my_putchar('0');
