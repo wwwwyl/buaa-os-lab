@@ -28,8 +28,8 @@ lp1:
 	sb	v0,0(t1)
 	bne	v0,13,end
 	
-	li	v0,10
-	sb	v0,0(t1)
+	li	t0,10
+	sb	t0,0(t1)
 	
 end:
         jr      ra

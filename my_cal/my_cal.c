@@ -22,7 +22,7 @@ void my_cal(){
 	//i--;
 	while(ls[i]=='0')i--;
 	for(;i>=0;i--) _my_putchar(ls[i]);
-	_my_putchar('\n');
+	//_my_putchar('\n');
 
 	/*
 	char c = _my_getchar();
