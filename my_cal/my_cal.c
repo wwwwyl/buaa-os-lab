@@ -12,6 +12,7 @@ void my_cal(){
 		if(c<'0'||c>'9') continue;
 		num = num*10+c-'0';
 	}
+	if(num==0) _my_putchar('0');
 	int i=0;
 	while(num){
 		if(num%2) ls[i++]='1';
