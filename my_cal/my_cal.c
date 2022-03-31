@@ -10,7 +10,7 @@ void my_cal(){
 		if(c<'0'||c>'9') continue;
 		num = num*10+c-'0';
 	}
-	char ls[100];
+	char ls[10000];
 	int i=0;
 	while(num){
 		if(num%2) ls[i++]='1';
