@@ -7,6 +7,7 @@ void my_cal(){
 	while(1){
 		char c = _my_getchar();
 		if(c == '\n') break;
+		if(c<'0'||c>'9') continue;
 		num = num*10+c-'0';
 	}
 	char ls[100];
