@@ -16,7 +16,9 @@ void my_cal(){
 		else ls[i++]='0';
 		num/=2;
 	}
-	for(i--;i>=0;i--) _my_putchar(ls[i]);
+	i--;
+	while(ls[i]=='0')i--;
+	for(;i>=0;i--) _my_putchar(ls[i]);
 	_my_putchar('\n');
 
 	/*
