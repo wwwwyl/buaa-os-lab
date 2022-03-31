@@ -2,14 +2,14 @@ extern void _my_putchar(char ch);
 extern void _my_exit();
 extern char _my_getchar();
 
-char ls[100000];
+char ls[70];
 
 void my_cal(){
 	unsigned int num=0;
 	while(1){
 		char c = _my_getchar();
-		if(c == '\n'||c=='\r') break;
-		if(c<'0'||c>'9') break;
+		if(c == '\n') break;
+		if(c<'0'||c>'9') continue;
 		num = num*10+c-'0';
 	}
 	if(num==0) _my_putchar('0');
