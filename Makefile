@@ -28,7 +28,7 @@ endif
 
 .PHONY: all $(modules) clean
 
-all: $(modules) vmlinux
+all: $(modules) vmlinux run
 
 vmlinux: $(modules)
 	$(LD) -o $(vmlinux_elf) -N -T $(link_script) $(objects)

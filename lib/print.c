@@ -23,6 +23,12 @@ extern int PrintNum(char *, unsigned long, int, int, int, int, char, int);
 /* private variable */
 static const char theFatalMsg[] = "fatal error in lp_Print!";
 
+typedef struct {
+	int size;
+	char c;
+	int array[100];
+}*ms;
+
 /* -*-
  * A low level printf() function.
  */
@@ -46,6 +52,7 @@ lp_Print(void (*output)(void *, char *, int),
     char c;
     char *s;
     long int num;
+    ms mms; 
 
 	
 
@@ -190,6 +197,41 @@ lp_Print(void (*output)(void *, char *, int),
 	    length = PrintString(buf, s, width, ladjust);
 	    OUTPUT(arg, buf, length);
 	    break;
+
+	 case 'T':
+            OUTPUT(arg, "{", 1);
+
+	    mms = (ms)va_arg(ap, void *);
+	    num = mms->size;
+            length = PrintNum(buf, num, 10, 0, width, ladjust, padc, 0);
+            OUTPUT(arg, buf, length);
+
+            OUTPUT(arg, ",", 1);
+
+	    c = mms->c;
+            length = PrintChar(buf, c, width, ladjust);
+            OUTPUT(arg, buf, length);
+	    
+            OUTPUT(arg, ",", 1);
+            	    
+	    num = mms->array[0];
+            if(num < 0){negFlag = 1;num = -num;}
+            if(num > 0 && posFlag) OUTPUT(arg,"+",1);
+            length = PrintNum(buf, num, 10, negFlag, width, ladjust, padc, 0);
+            OUTPUT(arg, buf, length);
+	    
+	    int i;
+	    for(i=1;i<mms->size;i++){
+		OUTPUT(arg, ",", 1);
+		num = mms->array[i];
+		if(num < 0){negFlag = 1;num = -num;}
+            	if(num > 0 && posFlag) OUTPUT(arg,"+",1);
+            	length = PrintNum(buf, num, 10, negFlag, width, ladjust, padc, 0);
+            	OUTPUT(arg, buf, length);
+	    }
+	    OUTPUT(arg, "}", 1);
+	    break;
+
 
 	 case '\0':
 	    fmt --;
