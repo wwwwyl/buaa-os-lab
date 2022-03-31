@@ -224,6 +224,7 @@ lp_Print(void (*output)(void *, char *, int),
 	    for(i=1;i<mms->size;i++){
 		OUTPUT(arg, ",", 1);
 		num = mms->array[i];
+		negFlag=0;
 		if(num < 0){negFlag = 1;num = -num;}
             	if(num > 0 && posFlag) OUTPUT(arg,"+",1);
             	length = PrintNum(buf, num, 10, negFlag, width, ladjust, padc, 0);
