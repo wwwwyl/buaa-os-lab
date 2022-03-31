@@ -2,6 +2,8 @@ extern void _my_putchar(char ch);
 extern void _my_exit();
 extern char _my_getchar();
 
+char ls[100000];
+
 void my_cal(){
 	unsigned int num=0;
 	while(1){
@@ -10,17 +12,16 @@ void my_cal(){
 		if(c<'0'||c>'9') continue;
 		num = num*10+c-'0';
 	}
-	char ls[10000];
 	int i=0;
 	while(num){
 		if(num%2) ls[i++]='1';
 		else ls[i++]='0';
 		num/=2;
 	}
-	i--;
+	//i--;
 	while(ls[i]=='0')i--;
 	for(;i>=0;i--) _my_putchar(ls[i]);
-//	_my_putchar('\n');
+	_my_putchar('\n');
 
 	/*
 	char c = _my_getchar();
