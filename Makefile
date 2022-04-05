@@ -24,7 +24,7 @@ objects		  := $(boot_dir)/start.o			  \
 
 .PHONY: all $(modules) clean
 
-all: $(modules) vmlinux
+all: $(modules) vmlinux run
 
 vmlinux: $(modules)
 	$(LD) -o $(vmlinux_elf) -N -T $(link_script) $(objects)
@@ -38,5 +38,8 @@ clean:
 			$(MAKE) --directory=$$d clean; \
 		done; \
 	rm -rf *.o *~ $(vmlinux_elf)
+
+run:
+	/OSLAB/gxemul -E testmips -C R3000 -M 64 gxemul/vmlinux
 
 include include.mk
