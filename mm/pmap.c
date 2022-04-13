@@ -89,7 +89,7 @@ static void *alloc(u_int n, u_int align, int clear)
 static Pte *boot_pgdir_walk(Pde *pgdir, u_long va, int create)
 {
 
-	Pde *pgdir_entryp;
+	Pde *pgdir_entryp = pgdir + PDX(va);
 	Pte *pgtable, *pgtable_entry;
 
 	/* Step 1: Get the corresponding page directory entry and page table. */
@@ -100,11 +100,16 @@ static Pte *boot_pgdir_walk(Pde *pgdir, u_long va, int create)
 	/* Step 2: If the corresponding page table is not exist and parameter `create`
 	 * is set, create one. And set the correct permission bits for this new page
 	 * table. */
-
-
+	if((*pgdir_entryp & PTE_V) == 0) {
+		if(create) {
+			*pgdir_entryp = PADDR(alloc(BY2PG, BY2PG, 1));
+			*pgdir_entryp = (*pgtable) | PTE_V | PTE_R;		
+		}else return 0;
+	}
+	pgtable = (Pte *) KADDR(PTE_ADDR(*pgdir_entryp));
 	/* Step 3: Get the page table entry for `va`, and return it. */
-
-
+	pgtable_entry = pgtable + PTX(va);
+	return pgtable_entry;
 }
 
 /* Exercise 2.7 */
@@ -120,13 +125,12 @@ void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm)
 	int i, va_temp;
 	Pte *pgtable_entry;
 
-	/* Step 1: Check if `size` is a multiple of BY2PG. */
-
-
-	/* Step 2: Map virtual address space to physical address. */
-	/* Hint: Use `boot_pgdir_walk` to get the page table entry of virtual address `va`. */
-
-
+	for (i = 0, size = ROUND(size, BY2PG); i < size; i += BY2PG) {
+        /* Step 1. use `boot_pgdir_walk` to "walk" the page directory */
+        	pgtable_entry = boot_pgdir_walk(pgdir, va + i, 1);
+        /* Step 2. fill in the page table */
+        	*pgtable_entry = ( pa+i )| perm | PTE_V;
+    	}
 }
 
 /* Overview:
@@ -262,21 +266,21 @@ whether this function execute successfully or not.
 This function has something in common with function `boot_pgdir_walk`.*/
 int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)
 {
-	Pde *pgdir_entryp;
-	Pte *pgtable;
-	struct Page *ppage;
-
-	/* Step 1: Get the corresponding page directory entry and page table. */
-
-
-	/* Step 2: If the corresponding page table is not exist(valid) and parameter `create`
-	 * is set, create one. And set the correct permission bits for this new page table.
-	 * When creating new page table, maybe out of memory. */
-
-
-	/* Step 3: Set the page table entry to `*ppte` as return value. */
-
-
+	Pde *pgdir_entry = pgdir + PDX(va);
+	struct Page *page;
+	int ret;
+	// check whether the page table exists
+	if ((*pgdir_entry & PTE_V) == 0) {
+        	if (create) {
+            		if ((ret = page_alloc(&page)) < 0) return ret;
+            		*pgdir_entry = ( page2pa(page) ) | PTE_V | PTE_R;
+			page->pp_ref++;
+        	} else {
+            		*ppte = 0;
+            		return 0;
+        	}
+    	}
+    	*ppte = ((Pte *)( KADDR(PTE_ADDR(*pgdir_entry)) )) + PTX(va);
 	return 0;
 }
 
@@ -294,35 +298,30 @@ If there is already a page mapped at `va`, call page_remove() to release this ma
 The `pp_ref` should be incremented if the insertion succeeds.*/
 int page_insert(Pde *pgdir, struct Page *pp, u_long va, u_int perm)
 {
-	u_int PERM;
-	Pte *pgtable_entry;
-	PERM = perm | PTE_V;
+    Pte *pgtable_entry;
+    int ret;
+    perm = perm | PTE_V;
 
-	/* Step 1: Get corresponding page table entry. */
-	pgdir_walk(pgdir, va, 0, &pgtable_entry);
-
-	if (pgtable_entry != 0 && (*pgtable_entry & PTE_V) != 0) {
-		if (pa2page(*pgtable_entry) != pp) {
-			page_remove(pgdir, va);
-		} else	{
-			tlb_invalidate(pgdir, va);
-			*pgtable_entry = (page2pa(pp) | PERM);
-			return 0;
-		}
-	}
-
-	/* Step 2: Update TLB. */
-
-	/* hint: use tlb_invalidate function */
-
-
-	/* Step 3: Do check, re-get page table entry to validate the insertion. */
-
-	/* Step 3.1 Check if the page can be insert, if can’t return -E_NO_MEM */
-
-	/* Step 3.2 Insert page and increment the pp_ref */
-
-	return 0;
+    // Step 0. check whether `va` is already mapping to `pa`
+    pgdir_walk(pgdir, va, 0 /* for check */, &pgtable_entry);
+    if (pgtable_entry != 0 && (*pgtable_entry & PTE_V) != 0) {
+        // check whether `va` is mapping to another physical frame
+        if (pa2page(*pgtable_entry) != pp) {
+            page_remove(pgdir, va); // unmap it!
+        } else {
+            tlb_invalidate(pgdir, va);              // <~~
+            *pgtable_entry = page2pa(pp) | perm;    // update the permission
+            return 0;
+        }
+    }
+    tlb_invalidate(pgdir, va);                      // <~~
+    /* Step 1. use `pgdir_walk` to "walk" the page directory */
+    if ((ret = pgdir_walk(pgdir, va, 1, &pgtable_entry)) < 0)
+        return ret; // exception
+    /* Step 2. fill in the page table */
+    *pgtable_entry = ( page2pa(pp) ) | perm;
+    pp->pp_ref++;
+    return 0;
 }
 
 /*Overview:
