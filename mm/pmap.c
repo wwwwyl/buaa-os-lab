@@ -646,17 +646,7 @@ void pageout(int va, int context)
 
 int page_protect(struct Page *pp) {
 	if(pp->pp_protect == 1) return -2;
-	int is_free = 0;
-	struct Page *pil;
-	LIST_FOREACH(pil, &page_free_list, pp_link)
-        {
-                if(pil == pp)
-                {
-                        is_free = 1;
-                        break;
-                }
-        }
-	if(is_free){
+	if(pp->pp_ref == 0){
 		pp->pp_protect = 1;
 		return 0;
 	}
@@ -665,18 +655,7 @@ int page_protect(struct Page *pp) {
 
 int page_status_query(struct Page *pp){
 	if(pp->pp_protect == 1) return 3;
-	int is_free = 0;
-        struct Page *pil;
-        LIST_FOREACH(pil, &page_free_list, pp_link)
-        {
-                if(pil == pp)
-                {
-                        is_free = 1;
-                        break;
-                }
-        }
-        if(is_free){
-                pp->pp_protect = 1;
+        if(pp->pp_ref == 0){
                 return 2;
         }
         return 1;
