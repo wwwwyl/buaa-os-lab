@@ -27,8 +27,8 @@ void mips_detect_memory()
 {
 	/* Step 1: Initialize basemem.
 	 * (When use real computer, CMOS tells us how many kilobytes there are). */
-	maxpa = 0x4000000;
-	basemem = 0x4000000;
+	maxpa = 0x2000000;
+	basemem = 0x2000000;
 	extmem = 0x0; 
 	// Step 2: Calculate corresponding npage value.
 	npage = basemem >> PGSHIFT;
@@ -635,5 +635,88 @@ void pageout(int va, int context)
 
 	page_insert((Pde *)context, p, VA2PFN(va), PTE_R);
 	printf("pageout:\t@@@___0x%x___@@@  ins a page \n", va);
+}
+
+static struct Buddy_list buddy_list;
+int buddyN;
+
+void buddy_init(void){
+	LIST_INIT(&buddy_list);
+	buddyN = 8;	
+	int i;
+	u_long bStart = 0x2000000;
+	for(i=0;i<buddyN;i++){
+		struct Buddy *tbuddy = (struct Buddy*)alloc(sizeof(struct Buddy),BY2PG,1); 
+		tbuddy->bb_start = 0x2000000 + i*0x0400000;
+		tbuddy->bb_size = 10;
+		tbuddy->bb_ref = 0;
+		tbuddy->bb_parent = 0;
+		LIST_INSERT_TAIL(&buddy_list,tbuddy,bb_link);
+	}
+}
+
+int buddy_alloc(u_int size, u_int *pa, u_char *pi){
+	int req_size;
+	for(req_size=0;req_size<=10;req_size++){
+		if((1<<(req_size+12)) >= size) break;
+	}
+	int memout = 1;
+	struct Buddy *bil;
+	LIST_FOREACH(bil,&buddy_list,bb_link){
+		if(bil->bb_ref==0 && bil->bb_size >= req_size){
+			memout = 0;
+			break;
+		}
+		// printf("%x %x\n", bil->bb_start, 1<<(bil->bb_size+12));
+	}
+	if(memout) return -1;
+	*pi = req_size;
+	*pa = bil->bb_start;
+	while(bil->bb_size > req_size && bil->bb_size != 0){
+		bil->bb_size--;
+
+		struct Buddy *tbuddy = (struct Buddy*)alloc(sizeof(struct Buddy),BY2PG,1);
+                tbuddy->bb_start = bil->bb_start + (1<<(bil->bb_size+12));
+                //printf("%x\n",tbuddy->bb_start);
+		tbuddy->bb_size = bil->bb_size;
+                tbuddy->bb_ref = 0;
+		tbuddy->bb_parent = bil->bb_start;
+		LIST_INSERT_AFTER(bil,tbuddy,bb_link);
+	}
+	bil->bb_ref = 1;
+	return 0;
+}
+
+void buddy_free(u_int pa){
+	struct Buddy *bil;
+        LIST_FOREACH(bil,&buddy_list,bb_link){
+                if(bil->bb_start == pa){
+                        break;
+                }
+                // printf("%x %x\n", bil->bb_start, 1<<(bil->bb_size+12));
+        }
+	bil->bb_ref = 0;
+	int update;
+	while(bil->bb_size != 10){
+		update = 0;
+		struct Buddy *bnext = LIST_NEXT(bil, bb_link);
+		if(bnext != NULL && bnext->bb_ref==0){
+			if(bnext->bb_parent == bil->bb_start && bnext->bb_size == bil->bb_size){
+				update++;
+				bil->bb_size++;
+				LIST_REMOVE(bnext,bb_link);
+			}
+		}
+		struct Buddy *bfront = bil->bb_link.le_prev;
+                if(bfront != NULL && bfront->bb_ref==0){
+                        if(bil->bb_parent == bfront->bb_start && bfront->bb_size == bil->bb_size){
+                                update++;
+                                bfront->bb_size++;
+                                LIST_REMOVE(bil,bb_link);
+				bil = bfront;
+                        }
+                }
+		if(!update) break;
+	}
 }
 

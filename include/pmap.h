@@ -22,6 +22,24 @@ struct Page {
 };
 
 extern struct Page *pages;
+// Buddy
+LIST_HEAD(Buddy_list, Buddy);
+typedef LIST_ENTRY(Buddy) Buddy_LIST_entry_t;
+
+struct Buddy {
+        Buddy_LIST_entry_t bb_link;      /* free list link */
+
+        // Ref is the count of pointers (usually in page table entries)
+        // to this page.  This only holds for pages allocated using
+        // page_alloc.  Pages allocated at boot time using pmap.c's "alloc"
+        // do not have valid reference count fields.
+	u_long bb_start;
+	u_char bb_size;
+	u_long bb_parent;
+        u_short bb_ref;
+};
+
+extern struct Buddy *buddys;
 
 static inline u_long
 page2ppn(struct Page *pp)
@@ -101,6 +119,10 @@ void tlb_invalidate(Pde *pgdir, u_long va);
 void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm);
 
 extern struct Page *pages;
+
+void buddy_init(void);
+int buddy_alloc(u_int size, u_int *pa, u_char *pi);
+void buddy_free(u_int pa);
 
 
 #endif /* _PMAP_H_ */
