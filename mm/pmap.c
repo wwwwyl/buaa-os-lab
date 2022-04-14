@@ -190,10 +190,14 @@ void page_init(void)
 	 * filed to 1) */
 	u_long floorN_freemem = PPN(PADDR(freemem));
 	u_long i;
-	for(i=0; i < floorN_freemem; i++) pages[i].pp_ref = 1;
+	for(i=0; i < floorN_freemem; i++){
+	       	pages[i].pp_ref = 1;
+		pages[i].pp_protect = 0;
+	}
 	/* Step 4: Mark the other memory as free. */
 	for(i=floorN_freemem; i<npage; i++){
 		pages[i].pp_ref=0;
+		pages[i].pp_protect = 0;
 		LIST_INSERT_HEAD(&page_free_list,&pages[i],pp_link);
 	}
 }
@@ -218,9 +222,12 @@ int page_alloc(struct Page **pp)
 	struct Page *ppage_temp;
 
 	/* Step 1: Get a page from free memory. If fail, return the error code.*/
+	
+	do{
 	if (LIST_EMPTY(&page_free_list)) return -E_NO_MEM;
 	ppage_temp = LIST_FIRST(&page_free_list);
 	LIST_REMOVE(ppage_temp,pp_link);
+	}while(ppage_temp->pp_protect == 1);
 	/* Step 2: Initialize this page.
 	 * Hint: use `bzero`. */
 	bzero((void*)page2kva(ppage_temp),BY2PG);
@@ -637,3 +644,40 @@ void pageout(int va, int context)
 	printf("pageout:\t@@@___0x%x___@@@  ins a page \n", va);
 }
 
+int page_protect(struct Page *pp) {
+	if(pp->pp_protect == 1) return -2;
+	int is_free = 0;
+	struct Page *pil;
+	LIST_FOREACH(pil, &page_free_list, pp_link)
+        {
+                if(pil == pp)
+                {
+                        is_free = 1;
+                        break;
+                }
+        }
+	if(is_free){
+		pp->pp_protect = 1;
+		return 0;
+	}
+	return -1;
+}
+
+int page_status_query(struct Page *pp){
+	if(pp->pp_protect == 1) return 3;
+	int is_free = 0;
+        struct Page *pil;
+        LIST_FOREACH(pil, &page_free_list, pp_link)
+        {
+                if(pil == pp)
+                {
+                        is_free = 1;
+                        break;
+                }
+        }
+        if(is_free){
+                pp->pp_protect = 1;
+                return 2;
+        }
+        return 1;
+}
