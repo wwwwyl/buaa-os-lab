@@ -665,6 +665,17 @@ int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
         }
         *vpn_buffer = (int *)alloc(cnt * sizeof(int), BY2PG, 1);
         
-        for(i=0; i<cnt; i++)vpn_buffer[i]=buffer[i];
+	int min, mincnt, j;
+        for(i=0; i<cnt; i++){
+		min = 1<<20;
+		for(j=0; j<cnt;j++){
+			if(buffer[j]<min){
+				min = buffer[j];
+				mincnt = j;
+			}
+		}
+		vpn_buffer[i]=min;
+		buffer[mincnt] = 1<<20;
+	}
         return cnt;
 }
