@@ -16,8 +16,8 @@ Pde *boot_pgdir;
 struct Page *pages;
 static u_long freemem;
 
-static struct Page_list page_free_list;	/* Free list of physical pages */
-
+struct Page_list page_free_list;	/* Free list of physical pages */
+struct Page_list fast_page_free_list;
 
 
 /* Exercise 2.1 */
@@ -180,6 +180,7 @@ void mips_vm_init()
   are reference counted, and free pages are kept on a linked list.
 Hint:
 Use `LIST_INSERT_HEAD` to insert something to list.*/
+int fast_door = (0x3000000>>PGSHIFT);
 void page_init(void)
 {
 	/* Step 1: Initialize page_free_list. */
@@ -193,10 +194,15 @@ void page_init(void)
 	u_long i;
 	for(i=0; i < floorN_freemem; i++) pages[i].pp_ref = 1;
 	/* Step 4: Mark the other memory as free. */
-	for(i=floorN_freemem; i<npage; i++){
+	for(i=floorN_freemem; i<fast_door; i++){
 		pages[i].pp_ref=0;
 		LIST_INSERT_HEAD(&page_free_list,&pages[i],pp_link);
 	}
+	LIST_INIT(&fast_page_free_list);
+	for(; i<npage; i++){
+                pages[i].pp_ref=0;
+                LIST_INSERT_HEAD(&fast_page_free_list,&pages[i],pp_link);
+        }
 }
 
 /* Exercise 2.4 */
@@ -240,7 +246,9 @@ void page_free(struct Page *pp)
 	if (pp->pp_ref > 0) return;
 	/* Step 2: If the `pp_ref` reaches 0, mark this page as free and return. */
 	if (pp->pp_ref == 0) {
-		LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
+		int ppppn = page2ppn(pp);
+		if(ppppn < fast_door) LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
+		else LIST_INSERT_HEAD(&fast_page_free_list, pp, pp_link);
 		return;
 	}
 	/* If the value of `pp_ref` is less than 0, some error must occurr before,
@@ -679,3 +687,19 @@ int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
 	}
         return cnt;
 }
+
+struct Page* page_migrate(Pde *pgdir, struct Page *pp){
+	int ppppn = page2ppn(pp);
+	struct Page *tp;
+	if(ppppn < fast_door){
+		tp = LIST_FIRST(&fast_page_free_list);
+		LIST_REMOVE(tp, pp_link);
+		bzero((void*)page2kva(tp),BY2PG);
+	}else{
+		tp = LIST_FIRST(&page_free_list);
+                LIST_REMOVE(tp, pp_link);
+                bzero((void*)page2kva(tp),BY2PG);
+	}
+	return tp;
+}
+
