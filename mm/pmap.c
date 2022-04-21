@@ -640,7 +640,7 @@ void pageout(int va, int context)
 
 int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
         int cnt = 0;
-        int buffer[100];
+        int buffer[1024];
         u_long high;
         for(high = 0; high < (1<<20);high++){
                 u_long va = high<<12;
