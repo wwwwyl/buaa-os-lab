@@ -246,9 +246,10 @@ void page_free(struct Page *pp)
 	if (pp->pp_ref > 0) return;
 	/* Step 2: If the `pp_ref` reaches 0, mark this page as free and return. */
 	if (pp->pp_ref == 0) {
+		//printf("free!");
 		int ppppn = page2ppn(pp);
-		if(ppppn < fast_door) LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
-		else LIST_INSERT_HEAD(&fast_page_free_list, pp, pp_link);
+		if(ppppn < fast_door){ LIST_INSERT_HEAD(&page_free_list, pp, pp_link);}
+		else {LIST_INSERT_HEAD(&fast_page_free_list, pp, pp_link);}
 		return;
 	}
 	/* If the value of `pp_ref` is less than 0, some error must occurr before,
@@ -305,7 +306,7 @@ int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)
 Hint:
 If there is already a page mapped at `va`, call page_remove() to release this mapping.
 The `pp_ref` should be incremented if the insertion succeeds.*/
-int page_activate[4096];
+int page_activate[10];
 int page_activate_cnt = 0;
 
 int page_insert(Pde *pgdir, struct Page *pp, u_long va, u_int perm)
@@ -671,7 +672,7 @@ int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
                         }
                 }
         }
-        *vpn_buffer = (int *)alloc(cnt * sizeof(int), BY2PG, 1);
+        //*vpn_buffer = (int *)alloc(cnt * sizeof(int), BY2PG, 1);
         
 	int min, mincnt, j;
         for(i=0; i<cnt; i++){
@@ -700,16 +701,23 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
                 LIST_REMOVE(tp, pp_link);
                 bzero((void*)page2kva(tp),BY2PG);
 	}
+	//tp->
 	int a[100], len, i;
-	len = inverted_page_lookup(pgdir, ppppn, a);
+	len = inverted_page_lookup(pgdir, pp, a);
 	for(i=0; i<len; i++){
 		u_long va = a[i]<<12;
 		Pte *pgtable_entry;
-		pgdir_walk(pgdir, va, 0 , &pgtable_entry);
+		struct Page *ppage;
+		ppage = page_lookup(pgdir, va, &pgtable_entry);
+		//printf("%d\n", page2ppn(ppage));
 		u_int perm = *pgtable_entry & 0xFFF;
+		//page_remove(pgdir, va);
 		page_insert(pgdir, tp, va, perm);
+		pp->pp_ref--;
 	}
-	page_decref(pp);
+	//printf("%d\n", pp->pp_ref);
+	//page_decref(pp);
+	if(pp->pp_ref == 0) page_free(pp);
 
 	return tp;
 }

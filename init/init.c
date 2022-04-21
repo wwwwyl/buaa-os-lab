@@ -7,6 +7,7 @@
 static void page_migrate_test(){
 struct Page *pp;
 page_alloc(&pp);
+//printf("%d\n", page2ppn(pp));
 Pde *pgdir = (Pde*)page2kva(pp);
 page_alloc(&pp);
 page_insert(pgdir, pp, 0x23300000, 0);
