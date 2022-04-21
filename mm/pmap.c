@@ -19,6 +19,7 @@ static u_long freemem;
 static struct Page_list page_free_list;	/* Free list of physical pages */
 
 
+
 /* Exercise 2.1 */
 /* Overview:
    Initialize basemem and npage.
@@ -637,3 +638,23 @@ void pageout(int va, int context)
 	printf("pageout:\t@@@___0x%x___@@@  ins a page \n", va);
 }
 
+int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
+        int cnt = 0;
+        int buffer[100];
+        u_long high;
+        for(high = 0; high < (1<<20);high++){
+                u_long va = high<<12;
+                Pte *pgtable_entry;
+                pgdir_walk(pgdir, va, 0, &pgtable_entry);
+                if (pgtable_entry != 0 && (*pgtable_entry & PTE_V) != 0) {
+                        if(pa2page(*pgtable_entry) == pp){
+                                buffer[cnt] = high;
+                                cnt++;
+                        }
+                }
+        }
+        *vpn_buffer = (int *)alloc(cnt * sizeof(int), BY2PG, 1);
+        int i;
+        for(i=0; i<cnt; i++)vpn_buffer[i]=buffer[i];
+        return cnt;
+}
