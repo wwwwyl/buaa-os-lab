@@ -717,8 +717,7 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 	}
 	//printf("%d\n", pp->pp_ref);
 	//page_decref(pp);
-	pp->pp_ref = 0;
-	page_free(pp);
+	if(pp->pp_ref == 0) page_free(pp);
 
 	return tp;
 }
