@@ -700,6 +700,16 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
                 LIST_REMOVE(tp, pp_link);
                 bzero((void*)page2kva(tp),BY2PG);
 	}
+	int a[100], len, i;
+	len = inverted_page_lookup(pgdir, ppppn, a);
+	for(i=0; i<len; i++){
+		u_long va = a[i]<<12;
+		Pte *pgtable_entry;
+		pgdir_walk(pgdir, va, 0 , &pgtable_entry);
+		u_int perm = *pgtable_entry & 0xFFF;
+		page_insert(pgdir, tp, va, perm);
+	}
+
 	return tp;
 }
 
