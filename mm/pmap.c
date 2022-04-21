@@ -695,13 +695,13 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 	if(ppppn < fast_door){
 		tp = LIST_FIRST(&fast_page_free_list);
 		LIST_REMOVE(tp, pp_link);
-		bzero((void*)page2kva(tp),BY2PG);
+		//bzero((void*)page2kva(tp),BY2PG);
 	}else{
 		tp = LIST_FIRST(&page_free_list);
                 LIST_REMOVE(tp, pp_link);
-                bzero((void*)page2kva(tp),BY2PG);
+                //bzero((void*)page2kva(tp),BY2PG);
 	}
-	//tp->
+	bcopy((void*)page2kva(pp), (void*)page2kva(tp), BY2PG);
 	int a[100], len, i;
 	len = inverted_page_lookup(pgdir, pp, a);
 	for(i=0; i<len; i++){
