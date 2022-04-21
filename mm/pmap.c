@@ -709,6 +709,7 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 		u_int perm = *pgtable_entry & 0xFFF;
 		page_insert(pgdir, tp, va, perm);
 	}
+	page_decref(pp);
 
 	return tp;
 }
