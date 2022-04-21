@@ -297,8 +297,13 @@ int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)
 Hint:
 If there is already a page mapped at `va`, call page_remove() to release this mapping.
 The `pp_ref` should be incremented if the insertion succeeds.*/
+int page_activate[4096];
+int page_activate_cnt = 0;
+
 int page_insert(Pde *pgdir, struct Page *pp, u_long va, u_int perm)
 {
+	page_activate[page_activate_cnt++] = va>>12;
+
     Pte *pgtable_entry;
     int ret;
     perm = perm | PTE_V;
@@ -641,20 +646,25 @@ void pageout(int va, int context)
 int inverted_page_lookup(Pde *pgdir, struct Page *pp, int vpn_buffer[]){
         int cnt = 0;
         int buffer[1024];
-        u_long high;
-        for(high = 0; high < (1<<20);high++){
+        int i;
+        for(i = 0; i < page_activate_cnt;i++){
+		int high = page_activate[i];
                 u_long va = high<<12;
                 Pte *pgtable_entry;
                 pgdir_walk(pgdir, va, 0, &pgtable_entry);
                 if (pgtable_entry != 0 && (*pgtable_entry & PTE_V) != 0) {
                         if(pa2page(*pgtable_entry) == pp){
-                                buffer[cnt] = high;
-                                cnt++;
+				int vis = 0,j;
+				for(j = 0; j < cnt; j++)if(buffer[j]==high) vis =1;
+				if(vis == 0){
+                                	buffer[cnt] = high;
+                                	cnt++;
+				}
                         }
                 }
         }
         *vpn_buffer = (int *)alloc(cnt * sizeof(int), BY2PG, 1);
-        int i;
+        
         for(i=0; i<cnt; i++)vpn_buffer[i]=buffer[i];
         return cnt;
 }
