@@ -246,8 +246,8 @@ void page_free(struct Page *pp)
 	if (pp->pp_ref > 0) return;
 	/* Step 2: If the `pp_ref` reaches 0, mark this page as free and return. */
 	if (pp->pp_ref == 0) {
-		//printf("free!");
 		int ppppn = page2ppn(pp);
+		//printf("free %d\n", ppppn);
 		if(ppppn < fast_door){ LIST_INSERT_HEAD(&page_free_list, pp, pp_link);}
 		else {LIST_INSERT_HEAD(&fast_page_free_list, pp, pp_link);}
 		return;
@@ -704,6 +704,7 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 	bcopy((void*)page2kva(pp), (void*)page2kva(tp), BY2PG);
 	int a[1000], len, i;
 	len = inverted_page_lookup(pgdir, pp, a);
+	//printf("len %d\n", len);
 	for(i=0; i<len; i++){
 		u_long va = a[i]<<12;
 		Pte *pgtable_entry;
@@ -717,7 +718,7 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 	}
 	//printf("%d\n", pp->pp_ref);
 	//page_decref(pp);
-	if(pp->pp_ref == 0) page_free(pp);
+	//if(pp->pp_ref == 0) page_free(pp);
 
 	return tp;
 }
