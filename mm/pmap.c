@@ -306,7 +306,7 @@ int pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)
 Hint:
 If there is already a page mapped at `va`, call page_remove() to release this mapping.
 The `pp_ref` should be incremented if the insertion succeeds.*/
-int page_activate[10];
+int page_activate[1000];
 int page_activate_cnt = 0;
 
 int page_insert(Pde *pgdir, struct Page *pp, u_long va, u_int perm)
