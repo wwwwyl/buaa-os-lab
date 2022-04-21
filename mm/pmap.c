@@ -702,7 +702,7 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
                 //bzero((void*)page2kva(tp),BY2PG);
 	}
 	bcopy((void*)page2kva(pp), (void*)page2kva(tp), BY2PG);
-	int a[100], len, i;
+	int a[1000], len, i;
 	len = inverted_page_lookup(pgdir, pp, a);
 	for(i=0; i<len; i++){
 		u_long va = a[i]<<12;
@@ -713,11 +713,12 @@ struct Page* page_migrate(Pde *pgdir, struct Page *pp){
 		u_int perm = *pgtable_entry & 0xFFF;
 		//page_remove(pgdir, va);
 		page_insert(pgdir, tp, va, perm);
-		pp->pp_ref--;
+		//pp->pp_ref--;
 	}
 	//printf("%d\n", pp->pp_ref);
 	//page_decref(pp);
-	if(pp->pp_ref == 0) page_free(pp);
+	pp->pp_ref = 0;
+	page_free(pp);
 
 	return tp;
 }
