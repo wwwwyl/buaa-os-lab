@@ -646,8 +646,8 @@ int P(struct Env* e, int s){
 		e->env_shave[s-1]++;
 	}else {
 		e->env_swait = s;
-		if(s == 1) LIST_INSERT_TAIL(&wait_list[0], e, wait_link1);
-		if(s == 2) LIST_INSERT_TAIL(&wait_list[1], e, wait_link2);	
+		if(s == 1) LIST_INSERT_TAIL(&wait_list[0], e, wait_link);
+		if(s == 2) LIST_INSERT_TAIL(&wait_list[1], e, wait_link);	
 	}
 	return 0;
 }
@@ -663,8 +663,7 @@ int V(struct Env* e, int s){
 	if(s==1){ ep = LIST_FIRST(&wait_list[0]);}
 	if(s==2){ ep = LIST_FIRST(&wait_list[1]);}
 	if(ep != NULL){
-		if(s==1) LIST_REMOVE(ep, wait_link1);
-		if(s==2) LIST_REMOVE(ep, wait_link2);
+		LIST_REMOVE(ep, wait_link);
 		ep->env_swait = 0;
 		ep->env_shave[s-1] ++;
 	}else{
@@ -674,8 +673,8 @@ int V(struct Env* e, int s){
 }
 
 int get_status(struct Env* e){
-	//if(e->env_swait != 0 ) return 1;
-	//if(e->env_shave[0] != 0 || e->env_shave[1] != 0) return 2;
+	if(e->env_swait != 0 ) return 1;
+	if(e->env_shave[0] != 0 || e->env_shave[1] != 0) return 2;
 	return 3;
 }
 
