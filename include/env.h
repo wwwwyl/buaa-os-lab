@@ -44,7 +44,7 @@ struct Env {
 	u_int env_runs;			// number of times been env_run'ed
 	u_int env_nop;                  // align to avoid mul instruction
 	
-	u_int env_shave;
+	u_int env_shave[2];
 	u_int env_swait;
 };
 

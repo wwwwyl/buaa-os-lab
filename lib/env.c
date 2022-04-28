@@ -245,8 +245,6 @@ env_alloc(struct Env **new, u_int parent_id)
 	e->env_status = ENV_RUNNABLE;
 	e->env_parent_id = parent_id;
 	e->env_runs = 0;
-	e->env_shave = 0;
-        e->env_swait = 0;
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
     e->env_tf.cp0_status = 0x10001004;
 	e->env_tf.regs[29] = USTACKTOP;
@@ -635,6 +633,11 @@ void load_icode_check() {
     printf("load_icode_check() succeeded!\n");
 }
 
+struct Env *waitlist1[1024];
+struct Env *waitlist2[1024];
+int s1,t1,s2,t2;
+
+
 void S_init(int s, int num) {
 	LIST_INIT(&wait_list[s-1]);
 	s_num[s-1] = num;	
@@ -645,11 +648,15 @@ int P(struct Env* e, int s){
 
 	if(s_num[s-1] > 0){
 		s_num[s-1]--;
-		e->env_shave++;
+		e->env_shave[s-1]++;
 	}else {
 		e->env_swait = s;
-		if(s == 1) LIST_INSERT_TAIL(&wait_list[0], e, wait_link);
-		if(s == 2) LIST_INSERT_TAIL(&wait_list[1], e, wait_link);	
+		if(s == 1) {
+			waitlist1[t1++] = e;
+		}
+		if(s == 2) {
+			waitlist2[t2++] = e;
+		}
 	}
 	return 0;
 }
@@ -657,17 +664,19 @@ int P(struct Env* e, int s){
 int V(struct Env* e, int s){
 	if(e->env_swait != 0 ) return -1;
 	
-	e->env_shave --;
-	if(e->env_shave<0)  e->env_shave = 0;
+	if(e->env_shave[s-1] != 0)e->env_shave[s-1] --;
 
 	struct Env* ep;
 	ep = NULL;
-	if(s==1){ ep = LIST_FIRST(&wait_list[0]);}
-	if(s==2){ ep = LIST_FIRST(&wait_list[1]);}
+	if(s==1){
+		if(s1!=t1) ep = waitlist1[s1++];
+	}
+	if(s==2){
+		if(s2!=t2) ep = waitlist2[s2++];
+	}
 	if(ep != NULL){
-		LIST_REMOVE(ep, wait_link);
 		ep->env_swait = 0;
-		ep->env_shave ++;
+		ep->env_shave[s-1] ++;
 	}else{
 		s_num[s-1] ++;
 	}
@@ -676,7 +685,7 @@ int V(struct Env* e, int s){
 
 int get_status(struct Env* e){
 	if(e->env_swait != 0) return 1;
-	if(e->env_shave != 0) return 2;
+	if((e->env_shave[0]) != 0 || (e->env_shave[1]) != 0) return 2;
 	return 3;
 }
 
@@ -686,7 +695,8 @@ int my_env_create() {
 	r = env_alloc(&e, 0);
 	if(r != 0) return -1;
 	else {
-		e->env_shave = 0;
+		e->env_shave[0] = 0;
+		e->env_shave[1] = 0;
 		e->env_swait = 0;
 		return e->env_id;
 	}
