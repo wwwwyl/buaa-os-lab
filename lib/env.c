@@ -653,10 +653,10 @@ int P(struct Env* e, int s){
 }
 
 int V(struct Env* e, int s){
-	//if(e->env_swait != 0 ) return -1;
+	if(e->env_swait != 0 ) return -1;
 	
 	e->env_shave --;
-	if(e->env_shave<0)  e->env_shave = 0;
+	//if(e->env_shave<0)  e->env_shave = 0;
 
 	struct Env* ep;
 	ep = NULL;
