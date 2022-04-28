@@ -675,7 +675,7 @@ int V(struct Env* e, int s){
 }
 
 int get_status(struct Env* e){
-	//if(e->env_swait != 0) return 1;
+	if(e->env_swait != 0) return 1;
 	if(e->env_shave != 0) return 2;
 	return 3;
 }
