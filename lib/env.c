@@ -19,7 +19,7 @@ extern Pde *boot_pgdir;
 extern char *KERNEL_SP;
 
 static u_int asid_bitmap[2] = {0}; // 64
-
+static u_int system_asid = 0x4;
 
 /* Overview:
  *  This function is to allocate an unused ASID
@@ -41,7 +41,22 @@ static u_int asid_alloc() {
             return i;
         }
     }
-    panic("too many processes!");
+    return -1;
+}
+
+static u_int asid_isfree(u_int i) {
+	int index, inner;
+	index = i >> 5;
+        inner = i & 31;
+        if ((asid_bitmap[index] & (1 << inner)) == 0) return 1;
+	else return 0;
+}
+
+static void asid_use(u_int i) {
+	int index, inner;
+        index = i >> 5;
+        inner = i & 31;
+	asid_bitmap[index] |= 1 << inner;
 }
 
 /* Overview:
@@ -57,6 +72,12 @@ static void asid_free(u_int i) {
     asid_bitmap[index] &= ~(1 << inner);
 }
 
+static void asid_free_all() {
+	asid_bitmap[0] = 0;
+	asid_bitmap[1] = 0;
+}
+
+
 /* Overview:
  *  This function is to make a unique ID for every env
  *
@@ -66,10 +87,14 @@ static void asid_free(u_int i) {
  * Post-Condition:
  *  return e's envid on success
  */
-u_int mkenvid(struct Env *e) {
-    u_int idx = e - envs;
-    u_int asid = asid_alloc();
-    return (asid << (1 + LOG2NENV)) | (1 << LOG2NENV) | idx;
+u_int mkenvid(struct Env *e)
+{
+    /*Hint: lower bits of envid hold e's position in the envs array. */
+    u_int idx = (u_int)e - (u_int)envs;
+    idx /= sizeof(struct Env);
+
+    /*Hint: avoid envid being zero. */
+    return (1 << (LOG2NENV)) | idx;  //LOG2NENV=10
 }
 
 /* Overview:
@@ -147,6 +172,9 @@ env_init(void)
 		envs[i].env_status = ENV_FREE;
 		LIST_INSERT_HEAD(&env_free_list, envs+i, env_link);
 	}
+
+	system_asid = 0x4;
+	asid_free_all();
 
 }
 
@@ -243,6 +271,7 @@ env_alloc(struct Env **new, u_int parent_id)
 	e->env_status = ENV_RUNNABLE;
 	e->env_parent_id = parent_id;
 	e->env_runs = 0;
+	e->env_asid = 0;
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
     e->env_tf.cp0_status = 0x10001004;
 	e->env_tf.regs[29] = USTACKTOP;
@@ -629,5 +658,47 @@ void load_icode_check() {
 
     env_free(e);
     printf("load_icode_check() succeeded!\n");
+}
+
+u_int exam_env_run(struct Env *e) {
+	u_int t_system_asid = (e->env_asid) >> 6;
+	u_int t_hard_asid = (e->env_asid) & 0x3f;
+	if(t_system_asid == system_asid) {
+		// run
+		return 0;
+	}else {
+		if(asid_isfree(t_hard_asid)){
+			asid_use(t_hard_asid);
+			e->env_asid = (system_asid<<6) | t_hard_asid;
+			// run
+			return 0;
+		}else{
+			int r;
+			r = asid_alloc();
+			if(r == -1){
+				system_asid++;
+				asid_free_all();
+				r = asid_alloc();
+				e->env_asid = (system_asid<<6) | r;
+                                // run
+                                return 1;
+			}else {
+				e->env_asid = (system_asid<<6) | r;
+				// run
+				return 0;
+			}
+		}
+	}
+	panic("something error!");
+}
+
+void exam_env_free(struct Env *e) {
+	if(e->env_asid == 0) return;
+	u_int t_system_asid = (e->env_asid) >> 6;
+        u_int t_hard_asid = (e->env_asid) & 0x3f;
+	e->env_asid = 0;
+	if(t_system_asid == system_asid) {
+		asid_free(t_hard_asid);
+	}
 }
 
