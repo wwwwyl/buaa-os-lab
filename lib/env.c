@@ -643,7 +643,7 @@ int P(struct Env* e, int s){
 
 	if(s_num[s-1] > 0){
 		s_num[s-1]--;
-		e->env_shave[s-1]++;
+		e->env_shave++;
 	}else {
 		e->env_swait = s;
 		if(s == 1) LIST_INSERT_TAIL(&wait_list[0], e, wait_link);
@@ -655,8 +655,8 @@ int P(struct Env* e, int s){
 int V(struct Env* e, int s){
 	if(e->env_swait != 0 ) return -1;
 	
-	e->env_shave[s-1] --;
-	if(e->env_shave[s-1]<0)  e->env_shave[s-1] = 0;
+	e->env_shave --;
+	if(e->env_shave<0)  e->env_shave = 0;
 
 	struct Env* ep;
 	ep = NULL;
@@ -665,7 +665,7 @@ int V(struct Env* e, int s){
 	if(ep != NULL){
 		LIST_REMOVE(ep, wait_link);
 		ep->env_swait = 0;
-		ep->env_shave[s-1] ++;
+		ep->env_shave ++;
 	}else{
 		s_num[s-1] ++;
 	}
@@ -673,8 +673,8 @@ int V(struct Env* e, int s){
 }
 
 int get_status(struct Env* e){
-	if(e->env_swait != 0 ) return 1;
-	if(e->env_shave[0] != 0 || e->env_shave[1] != 0) return 2;
+	if(e->env_swait != 0) return 1;
+	if(e->env_shave != 0) return 2;
 	return 3;
 }
 
@@ -684,8 +684,7 @@ int my_env_create() {
 	r = env_alloc(&e, 0);
 	if(r != 0) return -1;
 	else {
-		e->env_shave[0] = 0;
-		e->env_shave[1] = 0;
+		e->env_shave = 0;
 		e->env_swait = 0;
 		return e->env_id;
 	}
