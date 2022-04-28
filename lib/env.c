@@ -245,6 +245,8 @@ env_alloc(struct Env **new, u_int parent_id)
 	e->env_status = ENV_RUNNABLE;
 	e->env_parent_id = parent_id;
 	e->env_runs = 0;
+	e->env_shave = 0;
+        e->env_swait = 0;
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
     e->env_tf.cp0_status = 0x10001004;
 	e->env_tf.regs[29] = USTACKTOP;
@@ -656,7 +658,7 @@ int V(struct Env* e, int s){
 	if(e->env_swait != 0 ) return -1;
 	
 	e->env_shave --;
-	//if(e->env_shave<0)  e->env_shave = 0;
+	if(e->env_shave<0)  e->env_shave = 0;
 
 	struct Env* ep;
 	ep = NULL;
