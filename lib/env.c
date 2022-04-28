@@ -20,6 +20,8 @@ extern char *KERNEL_SP;
 
 static u_int asid_bitmap[2] = {0}; // 64
 
+static struct Env_list wait_list[2];
+u_int s_num[2];
 
 /* Overview:
  *  This function is to allocate an unused ASID
@@ -629,5 +631,64 @@ void load_icode_check() {
 
     env_free(e);
     printf("load_icode_check() succeeded!\n");
+}
+
+void S_init(int s, int num) {
+	LIST_INIT(&wait_list[s-1]);
+	s_num[s-1] = num;	
+}
+
+int P(struct Env* e, int s){
+	if(e->env_swait != 0) return -1;
+
+	if(s_num[s-1] > 0){
+		s_num[s-1]--;
+		e->env_shave[s-1]++;
+	}else {
+		e->env_swait = s;
+		if(s == 1) LIST_INSERT_TAIL(&wait_list[0], e, wait_link1);
+		if(s == 2) LIST_INSERT_TAIL(&wait_list[1], e, wait_link2);	
+	}
+	return 0;
+}
+
+int V(struct Env* e, int s){
+	if(e->env_swait != 0 ) return -1;
+	
+	e->env_shave[s-1] --;
+	if(e->env_shave[s-1]<0)  e->env_shave[s-1] = 0;
+
+	struct Env* ep;
+	ep = NULL;
+	if(s==1){ ep = LIST_FIRST(&wait_list[0]);}
+	if(s==2){ ep = LIST_FIRST(&wait_list[1]);}
+	if(ep != NULL){
+		if(s==1) LIST_REMOVE(ep, wait_link1);
+		if(s==2) LIST_REMOVE(ep, wait_link2);
+		ep->env_swait = 0;
+		ep->env_shave[s-1] ++;
+	}else{
+		s_num[s-1] ++;
+	}
+	return 0;
+}
+
+int get_status(struct Env* e){
+	if(e->env_swait != 0 ) return 1;
+	if(e->env_shave[0] != 0 || e->env_shave[1] != 0) return 2;
+	return 3;
+}
+
+int my_env_create() {
+	struct Env *e;
+    	int r;
+	r = env_alloc(&e, 0);
+	if(r != 0) return -1;
+	else {
+		e->env_shave[0] = 0;
+		e->env_shave[1] = 0;
+		e->env_swait = 0;
+		return e->env_id;
+	}
 }
 

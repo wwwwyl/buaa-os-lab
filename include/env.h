@@ -27,6 +27,8 @@ struct Env {
 	Pde  *env_pgdir;                // Kernel virtual address of page dir
 	u_int env_cr3;
 	LIST_ENTRY(Env) env_sched_link;
+	LIST_ENTRY(Env) wait_link1;
+	LIST_ENTRY(Env) wait_link2;
         u_int env_pri;
 	// Lab 4 IPC
 	u_int env_ipc_value;            // data value sent to us 
@@ -42,6 +44,9 @@ struct Env {
 	// Lab 6 scheduler counts
 	u_int env_runs;			// number of times been env_run'ed
 	u_int env_nop;                  // align to avoid mul instruction
+	
+	u_int env_shave[2];
+	u_int env_swait;
 };
 
 LIST_HEAD(Env_list, Env);
@@ -58,6 +63,12 @@ void env_destroy(struct Env *e);
 
 int envid2env(u_int envid, struct Env **penv, int checkperm);
 void env_run(struct Env *e);
+
+void S_init(int s, int num);
+int P(struct Env* e, int s);
+int V(struct Env* e, int s);
+int get_status(struct Env* e);
+int my_env_create();
 
 
 // for the grading script
