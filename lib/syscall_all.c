@@ -117,7 +117,7 @@ int sys_set_pgfault_handler(int sysno, u_int envid, u_int func, u_int xstacktop)
 	struct Env *env;
 	int ret;
 
-	ret = envid2env(envid, &env, 0);
+	ret = envid2env(envid, &env, 1);
 	if(ret < 0) return ret;
 
 	env->env_pgfault_handler = func;
@@ -150,21 +150,15 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 	// Your code here.
 	struct Env *env;
 	struct Page *ppage;
-	int ret;
-	ret = 0;
-
+	int ret = 0;
 	if ((perm & PTE_V) == 0 || perm & PTE_COW || va >= UTOP) return -E_INVAL;
-
-	ret = envid2env(envid, &env, 1);
-	if(ret < 0) return ret;
-
 	ret = page_alloc(&ppage);
-	if(ret < 0) return ret;
-
+	if (ret) return ret;
+	ret = envid2env(envid, &env, 1);
+	if (ret) return ret;
 	ret = page_insert(env->env_pgdir, ppage, va, perm);
-	if(ret < 0) return ret;
-
-	return 0;
+	if (ret) return ret;
+	return ret;
 }
 
 /* Overview:
@@ -197,16 +191,14 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
 	round_dstva = ROUNDDOWN(dstva, BY2PG);
 
     //your code here
-    	if(srcva >= UTOP || dstva >= UTOP) return -E_INVAL;
-	
-	ret = envid2env(srcid, &srcenv, 1);
-	if(ret < 0) return ret;
-	ret = envid2env(dstid, &dstenv, 1);
-	if(ret < 0) return ret;
-
+	if ((perm & PTE_V) == 0) return -E_INVAL;	
+	if (round_srcva >= UTOP || round_dstva >= UTOP) return -E_INVAL;
+	ret = envid2env(srcid, &srcenv, 0);
+	if (ret) return ret;
+	ret = envid2env(dstid, &dstenv, 0);
+	if (ret) return ret;
 	ppage = page_lookup(srcenv->env_pgdir, round_srcva, &ppte);
-	if(ppage == NULL) return -E_INVAL;
-	// if((*ppte & PTE_R) == 0 && (perm & PTE_R) == 1) return -E_INVAL;
+	if (ppage == NULL) return -1;
 	ret = page_insert(dstenv->env_pgdir, ppage, round_dstva, perm);
 
 	return ret;
@@ -228,17 +220,15 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 	int ret;
 	struct Env *env;
 
-	if(va >= UTOP) return -E_INVAL;
-
-	ret = envid2env(envid, &env, 1);
-	if(ret < 0) return ret;
-
+	ret = 0;
+	if (va >= UTOP) return -E_INVAL;
+	ret = envid2env(envid, &env, 0);
+	if (ret) return ret;
 	page_remove(env->env_pgdir, va);
 
 	return ret;
 	//	panic("sys_mem_unmap not implemented");
 }
-
 /* Overview:
  * 	Allocate a new environment.
  *
@@ -260,8 +250,6 @@ int sys_env_alloc(void)
 	
 	r = env_alloc(&e, curenv->env_id);
 	if(r < 0) return r;
-	e->env_status = ENV_NOT_RUNNABLE;
-	e->env_pri = curenv->env_pri;
 
 	bcopy((void *)KERNEL_SP - sizeof(struct Trapframe),
               (void *)&(e->env_tf),
@@ -407,7 +395,8 @@ int sys_ipc_can_send(int sysno, u_int envid, u_int value, u_int srcva,
 	if(srcva != 0){
 		p = page_lookup(curenv->env_pgdir, ROUNDDOWN(srcva, BY2PG), &ppte);
 		if(p == NULL) return -E_INVAL;
-		page_insert(e->env_pgdir, p, ROUNDDOWN(e->env_ipc_dstva, BY2PG), perm);
+		r = page_insert(e->env_pgdir, p, ROUNDDOWN(e->env_ipc_dstva, BY2PG), perm);
+		if(r < 0) return r;
 	}
 
 	return 0;
