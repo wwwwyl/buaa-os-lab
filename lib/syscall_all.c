@@ -150,15 +150,21 @@ int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 	// Your code here.
 	struct Env *env;
 	struct Page *ppage;
-	int ret = 0;
+	int ret;
+	ret = 0;
+
 	if ((perm & PTE_V) == 0 || perm & PTE_COW || va >= UTOP) return -E_INVAL;
-	ret = page_alloc(&ppage);
-	if (ret) return ret;
+	
 	ret = envid2env(envid, &env, 1);
-	if (ret) return ret;
+	if(ret < 0) return ret;
+
+	ret = page_alloc(&ppage);
+	if(ret < 0) return ret;
+
 	ret = page_insert(env->env_pgdir, ppage, va, perm);
-	if (ret) return ret;
-	return ret;
+	if(ret < 0) return ret;
+
+	return 0;
 }
 
 /* Overview:
@@ -191,14 +197,15 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
 	round_dstva = ROUNDDOWN(dstva, BY2PG);
 
     //your code here
-	if ((perm & PTE_V) == 0) return -E_INVAL;	
-	if (round_srcva >= UTOP || round_dstva >= UTOP) return -E_INVAL;
+    	if(srcva >= UTOP || dstva >= UTOP) return -E_INVAL;
+	
 	ret = envid2env(srcid, &srcenv, 0);
-	if (ret) return ret;
+	if(ret < 0) return ret;
 	ret = envid2env(dstid, &dstenv, 0);
-	if (ret) return ret;
+	if(ret < 0) return ret;
+
 	ppage = page_lookup(srcenv->env_pgdir, round_srcva, &ppte);
-	if (ppage == NULL) return -1;
+	if(ppage == NULL) return -1;
 	ret = page_insert(dstenv->env_pgdir, ppage, round_dstva, perm);
 
 	return ret;
@@ -219,16 +226,18 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 	// Your code here.
 	int ret;
 	struct Env *env;
-
 	ret = 0;
-	if (va >= UTOP) return -E_INVAL;
+
+	if(va >= UTOP) return -E_INVAL;
 	ret = envid2env(envid, &env, 0);
-	if (ret) return ret;
+	if(ret < 0) return ret;
+
 	page_remove(env->env_pgdir, va);
 
 	return ret;
 	//	panic("sys_mem_unmap not implemented");
 }
+
 /* Overview:
  * 	Allocate a new environment.
  *
