@@ -83,16 +83,24 @@ static void
 pgfault(u_int va)
 {
 	u_int *tmp;
+	int ret;
 	//	writef("fork.c:pgfault():\t va:%x\n",va);
+	if(((*vpt)[VPN(va)] & PTE_COW) == 0) user_panic("pgfault with no PTE_COW page!\n");
 
+	va = ROUNDDOWN(va, BY2PG);
+	tmp = USTACKTOP;
 	//map the new page at a temporary place
-
+	ret = syscall_mem_alloc(0, tmp, PTE_V | PTE_R);
+	if(ret < 0) user_panic("pgfault alloc faild!\n");
 	//copy the content
-
+	user_bcopy(va, tmp, BY2PG);
 	//map the page on the appropriate place
-
+	ret = syscall_mem_map(0, tmp, 0, va, PTE_V | PTE_R);
+	if(ret < 0) user_panic("pgfault remap faild!\n");
 	//unmap the temporary place
-
+	ret = syscall_mem_unmap(0, tmp);
+	if(ret < 0) user_panic("pgfault unmap faild!\n");
+	return;
 }
 
 /* Overview:
@@ -117,7 +125,16 @@ duppage(u_int envid, u_int pn)
 {
 	u_int addr;
 	u_int perm;
-
+	addr = pn << PGSHIFT;
+	perm = ((Pte *)(*vpt))[pn] & 0xfff;
+	int r;
+	if((perm & PTE_R) && !(perm & PTE_LIBRARY)) {
+		r = syscall_mem_map(0, addr, envid, addr, perm | PTE_COW);
+		r += syscall_mem_map(0, addr, 0, addr, perm | PTE_COW);
+	}else{
+		r = syscall_mem_map(0, addr, envid, addr, perm);
+	}
+	if(r < 0) user_panic("duppage error");
 	//	user_panic("duppage not implemented");
 }
 
@@ -140,12 +157,30 @@ fork(void)
 	extern struct Env *envs;
 	extern struct Env *env;
 	u_int i;
+	int ret;
 
 
 	//The parent installs pgfault using set_pgfault_handler
-
+	set_pgfault_handler(pgfault);
 	//alloc a new alloc
+	newenvid = syscall_env_alloc();
+	if(newenvid == 0){
+		env = envs + ENVX(syscall_getenvid());
+		return 0;
+	}
 
+	for(i=0; i<USTACKTOP; i+=BY2PG){
+		if( ((*vpd)[i>>PDSHIFT] & PTE_V) && ((*vpt)[i>>PGSHIFT] & PTE_V) ){
+			duppage(newenvid, VPN(i));
+		}
+	}
+
+	ret = syscall_mem_alloc(newenvid, UXSTACKTOP - BY2PG, PTE_V | PTE_R);
+	if (ret < 0) user_panic("fork alloc mem faild");
+	ret = syscall_set_pgfault_handler(newenvid, __asm_pgfault_handler, UXSTACKTOP);
+	if (ret < 0) user_panic("fork set pgfault faild");
+	ret = syscall_set_env_status(newenvid, ENV_RUNNABLE);
+	if (ret < 0) user_panic("fork set status faild");
 
 	return newenvid;
 }

@@ -190,10 +190,7 @@ env_setup_vm(struct Env *e)
      *  See ./include/mmu.h for layout.
      *  Can you use boot_pgdir as a template?
      */
-	for(; i < PDX(UVPT); i++){
-		pgdir[i] = boot_pgdir[i];
-	}
-	for(i = ULIM; i < PDX(KSTACKTOP); i++){
+	for(i = PDX(UTOP); i <= PDX(~0); i++){
 		pgdir[i] = boot_pgdir[i];
 	}
 	e->env_pgdir = pgdir;
@@ -244,7 +241,7 @@ env_alloc(struct Env **new, u_int parent_id)
 	e->env_parent_id = parent_id;
 	e->env_runs = 0;
     /* Step 4: Focus on initializing the sp register and cp0_status of env_tf field, located at this new Env. */
-    e->env_tf.cp0_status = 0x10001004;
+    	e->env_tf.cp0_status = 0x1000100c;
 	e->env_tf.regs[29] = USTACKTOP;
 
     /* Step 5: Remove the new Env from env_free_list. */
