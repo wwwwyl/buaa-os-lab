@@ -199,9 +199,9 @@ int sys_mem_map(int sysno, u_int srcid, u_int srcva, u_int dstid, u_int dstva,
     //your code here
 	if ((perm & PTE_V) == 0) return -E_INVAL;	
 	if (round_srcva >= UTOP || round_dstva >= UTOP) return -E_INVAL;
-	ret = envid2env(srcid, &srcenv, 1);
+	ret = envid2env(srcid, &srcenv, 0);
 	if (ret) return ret;
-	ret = envid2env(dstid, &dstenv, 1);
+	ret = envid2env(dstid, &dstenv, 0);
 	if (ret) return ret;
 	ppage = page_lookup(srcenv->env_pgdir, round_srcva, &ppte);
 	if (ppage == NULL) return -1;
@@ -228,7 +228,7 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 	ret = 0;
 
 	if(va >= UTOP) return -E_INVAL;
-	ret = envid2env(envid, &env, 1);
+	ret = envid2env(envid, &env, 0);
 	if(ret < 0) return ret;
 
 	page_remove(env->env_pgdir, va);
